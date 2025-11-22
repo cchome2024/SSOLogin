@@ -20,9 +20,10 @@ def init_db():
     create_db_and_tables()
     
     with Session(engine) as session:
-        # 检查是否已有用户
-        user = session.exec(select(User).where(User.username == "admin")).first()
-        if not user:
+        # 检查并创建/更新 admin 用户
+        admin_user = session.exec(select(User).where(User.username == "admin")).first()
+        if not admin_user:
+            # 创建新用户
             admin_user = User(
                 username="admin",
                 hashed_password=get_password_hash("admin123"),
@@ -31,7 +32,17 @@ def init_db():
             admin_user.roles = ["admin"]
             admin_user.permissions = ["view_pc", "view_fs", "manage_users"]
             session.add(admin_user)
-            
+        else:
+            # 更新已存在用户的角色和权限（如果为空或需要更新）
+            if not admin_user.roles_json or admin_user.roles_json == "[]":
+                admin_user.roles = ["admin"]
+            if not admin_user.permissions_json or admin_user.permissions_json == "[]":
+                admin_user.permissions = ["view_pc", "view_fs", "manage_users"]
+            session.add(admin_user)
+        
+        # 检查并创建/更新 user 用户
+        normal_user = session.exec(select(User).where(User.username == "user")).first()
+        if not normal_user:
             normal_user = User(
                 username="user",
                 hashed_password=get_password_hash("user123"),
@@ -40,5 +51,12 @@ def init_db():
             normal_user.roles = ["user"]
             normal_user.permissions = ["view_pc"]
             session.add(normal_user)
-            
-            session.commit()
+        else:
+            # 更新已存在用户的角色和权限（如果为空或需要更新）
+            if not normal_user.roles_json or normal_user.roles_json == "[]":
+                normal_user.roles = ["user"]
+            if not normal_user.permissions_json or normal_user.permissions_json == "[]":
+                normal_user.permissions = ["view_pc"]
+            session.add(normal_user)
+        
+        session.commit()
